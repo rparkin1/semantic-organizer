@@ -420,7 +420,11 @@ class SemanticAnalyzer:
             return np.zeros(self.embedding_model.get_sentence_embedding_dimension())
 
         try:
-            embedding = self.embedding_model.encode(text, convert_to_tensor=False)
+            text_to_encode = text
+            if "e5" in self.embedding_model_name.lower() and not text.startswith("query: ") and not text.startswith("passage: "):
+                text_to_encode = f"passage: {text}"
+                
+            embedding = self.embedding_model.encode(text_to_encode, convert_to_tensor=False)
             return np.array(embedding)
         except Exception as e:
             logger.error(f"Error generating embedding for text: {e}")

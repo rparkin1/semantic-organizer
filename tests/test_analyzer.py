@@ -17,7 +17,7 @@ class TestSemanticAnalyzer(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         # Mock the sentence transformer to avoid downloading models in tests
-        with patch('semantic_organizer.analyzer.SentenceTransformer') as mock_transformer:
+        with patch('sentence_transformers.SentenceTransformer') as mock_transformer:
             # Create a mock model that returns predictable embeddings
             mock_model = MagicMock()
             mock_model.get_sentence_embedding_dimension.return_value = 384

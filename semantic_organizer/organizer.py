@@ -470,9 +470,13 @@ class FileOrganizer:
             if source.is_file():
                 source_size = source.stat().st_size
                 if hasattr(shutil, 'disk_usage'):
-                    free_space = shutil.disk_usage(destination_parent).free
-                    if source_size > free_space:
-                        return f"Insufficient disk space for move operation"
+                    # Skip disk usage check if parent doesn't exist in dry run
+                    if self.dry_run and not destination_parent.exists():
+                        pass
+                    else:
+                        free_space = shutil.disk_usage(destination_parent).free
+                        if source_size > free_space:
+                            return f"Insufficient disk space for move operation"
 
             return None
 

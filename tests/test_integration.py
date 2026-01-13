@@ -65,18 +65,19 @@ class TestIntegration(unittest.TestCase):
             'content_weight': 0.8,
             'filename_weight': 0.2,
             'force': False,
-            'log_file': None
+            'log_file': None,
+            'copy': False
         }
         defaults.update(kwargs)
         return argparse.Namespace(**defaults)
 
-    @patch('semantic_organizer.analyzer.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_complete_organization_workflow(self, mock_transformer):
         """Test the complete organization workflow."""
         # Mock the sentence transformer
         mock_model = MagicMock()
         mock_model.get_sentence_embedding_dimension.return_value = 384
-        mock_model.encode.side_effect = lambda x: np.random.rand(384)
+        mock_model.encode.side_effect = lambda x, **kwargs: np.random.rand(384)
         mock_transformer.return_value = mock_model
 
         args = self._create_mock_args()
@@ -92,11 +93,11 @@ class TestIntegration(unittest.TestCase):
         self.assertGreater(organizer.stats['files_processed'], 0)
         self.assertGreater(organizer.stats['folders_processed'], 0)
 
-    @patch('semantic_organizer.analyzer.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_existing_theme_matching(self, mock_transformer):
         """Test that items are matched to existing themes."""
         # Create similar embeddings for theme matching
-        def mock_encode(text):
+        def mock_encode(text, **kwargs):
             if 'existing' in text.lower():
                 return np.array([1.0] + [0.0] * 383)  # Similar embedding for existing theme
             elif 'machine learning' in text.lower() or 'artificial intelligence' in text.lower():
@@ -118,11 +119,11 @@ class TestIntegration(unittest.TestCase):
         # Some items should have been matched to existing themes
         self.assertGreaterEqual(organizer.stats['existing_themes_used'], 0)
 
-    @patch('semantic_organizer.analyzer.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_new_theme_creation(self, mock_transformer):
         """Test creation of new themes for unmatched items."""
         # Create different embeddings that won't match existing themes
-        def mock_encode(text):
+        def mock_encode(text, **kwargs):
             if 'document' in text.lower():
                 return np.array([0.0, 1.0] + [0.0] * 382)  # Documents cluster
             elif 'report' in text.lower():
@@ -146,7 +147,7 @@ class TestIntegration(unittest.TestCase):
         # Should create new themes for unmatched items
         self.assertGreaterEqual(organizer.stats['new_themes_created'], 0)
 
-    @patch('semantic_organizer.analyzer.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_conflict_resolution(self, mock_transformer):
         """Test conflict resolution during organization."""
         # Set up conflicting files
@@ -168,7 +169,7 @@ class TestIntegration(unittest.TestCase):
         # Should have encountered and resolved conflicts
         self.assertGreaterEqual(organizer.stats['conflicts_encountered'], 0)
 
-    @patch('semantic_organizer.analyzer.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_dry_run_mode(self, mock_transformer):
         """Test dry run mode doesn't actually move files."""
         mock_model = MagicMock()
@@ -192,7 +193,7 @@ class TestIntegration(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(initial_count, final_count)
 
-    @patch('semantic_organizer.analyzer.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_folder_structure_preservation(self, mock_transformer):
         """Test that folder structures are preserved."""
         mock_model = MagicMock()
@@ -214,7 +215,7 @@ class TestIntegration(unittest.TestCase):
             self.assertTrue((moved_folder / "readme.md").exists())
             self.assertTrue((moved_folder / "code.py").exists())
 
-    @patch('semantic_organizer.analyzer.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_error_handling(self, mock_transformer):
         """Test error handling with problematic files."""
         # Create a file that will cause extraction errors
@@ -273,7 +274,7 @@ class TestEndToEnd(unittest.TestCase):
         if self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
 
-    @patch('semantic_organizer.analyzer.SentenceTransformer')
+    @patch('sentence_transformers.SentenceTransformer')
     def test_complete_workflow_with_real_files(self, mock_transformer):
         """Test complete workflow with actual file operations."""
         # Set up input directory with various files
@@ -289,7 +290,7 @@ class TestEndToEnd(unittest.TestCase):
         (input_dir / "video.mp4").write_text("Mock video file")
 
         # Create similar embeddings for ML-related files
-        def mock_encode(text):
+        def mock_encode(text, **kwargs):
             if any(word in text.lower() for word in ['machine', 'artificial', 'learning', 'intelligence']):
                 return np.array([1.0] + [0.1] * 383)  # Similar embeddings
             else:
@@ -315,7 +316,8 @@ class TestEndToEnd(unittest.TestCase):
             content_weight=0.8,
             filename_weight=0.2,
             force=False,
-            log_file=None
+            log_file=None,
+            copy=False
         )
 
         organizer = SemanticFileOrganizer(args)

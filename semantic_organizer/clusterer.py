@@ -491,6 +491,7 @@ class Clusterer:
 
         best_k = 2
         best_score = -1
+        scores = {}
 
         # Try different values of k and use silhouette score
         for k in range(2, max_k + 1):
@@ -504,13 +505,26 @@ class Clusterer:
                     continue
 
                 score = self.silhouette_score(X, labels)
+                scores[k] = score
                 if score > best_score:
                     best_score = score
                     best_k = k
-
+                
             except Exception as e:
                 logger.debug(f"Error evaluating k={k}: {e}")
                 continue
+
+        # Refinement: If we have multiple decent scores, prefer higher k
+        # to get more granular themes rather than one giant "Misc" theme.
+        # If a higher k has a score within 95% of the best score, take it.
+        sorted_k = sorted(scores.keys(), reverse=True)
+        threshold = best_score * 0.95
+        
+        for k in sorted_k:
+            if scores[k] >= threshold:
+                best_k = k
+                logger.debug(f"Adjusting optimal k to {best_k} (score {scores[k]:.3f}) for better granularity")
+                break
 
         logger.debug(f"Optimal k={best_k} with silhouette score={best_score:.3f}")
         return best_k
