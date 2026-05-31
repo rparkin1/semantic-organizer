@@ -421,6 +421,7 @@ class SemanticAnalyzer:
 
         try:
             text_to_encode = text
+            # Add prefix for E5 models if not already present
             if "e5" in self.embedding_model_name.lower() and not text.startswith("query: ") and not text.startswith("passage: "):
                 text_to_encode = f"passage: {text}"
                 
